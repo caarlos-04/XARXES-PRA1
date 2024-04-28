@@ -807,6 +807,7 @@ bool existsSensor(char nom[], int indexClient){
     bool exists = true;
     char *sensor;
     for(int i = 0; i < 6; i++){
+        exists = true;
         sensor =  clients[indexClient].controllers[i].name;
         for(int j = 0; j < strlen(sensor); j++){
             if(sensor[j] != nom[j]){
@@ -849,7 +850,6 @@ bool writeFile(char *filename, char *dispositiu, char *valor, char *tipus){
 //Si es rep la comadna get, i el nom del controlador i el sensor existeixen, s'envia un paquet TCP al client i la resposta en cas de que sigui existosa s'escriu al fitxer
 void getClientDataTcp(char *ctrlr, char *name){
     int numClient = getClientFromCtrlr(ctrlr);
-    printf("NUM CLIENT: %d\n", numClient);
     PaquetTCP paquetRebut;
     createTcpDataSocket();
     if(existsSensor(name, numClient) && numClient < 6 && numClient >= 0){
@@ -883,27 +883,31 @@ void setData(char *ctrlr, char *name, char *value){
     int numClient = getClientFromCtrlr(ctrlr);
     PaquetTCP paquetRebut;
     createTcpDataSocket();
-    if(existsSensor(name, numClient) && numClient < 6 && numClient >= 0){
-        PaquetTCP setData = crearPaquetTCP(paquets[9], clients[numClient].randAssignat, "", name, value);
-        sendTCP(setData,dataTcp);
-        if(recv(dataTcp,&paquetRebut, sizeof(paquetRebut),0) < 0){
-            printf("Operació fallida\n");
-        } else {
-            printPaquetRebutTCP(paquetRebut);
-            if(authorizedClient(paquetRebut.mac, "SEND_HELLO") && equals(getPackage(paquetRebut.pdu).tipus,"DATA_ACK")){
-                char filename[55];
-                sprintf(filename, "%s-%s.data", clients[numClient].name, clients[numClient].situacio);
-                if(!writeFile(filename, paquetRebut.dispositiu, paquetRebut.valor, getPackage(setData.pdu).tipus)){
-                    printf("No s'han pogut escriure les dades al fitxer");
-                }
-            } else if(equals(getPackage(paquetRebut.pdu).tipus, "DATA_NACK")){
-                printf("Operació fallida, DATA_NACK rebut\n");
+    if(name[strlen(name)- 1] == 'I'){
+        if(existsSensor(name, numClient) && numClient < 6 && numClient >= 0){
+            PaquetTCP setData = crearPaquetTCP(paquets[9], clients[numClient].randAssignat, "", name, value);
+            sendTCP(setData,dataTcp);
+            if(recv(dataTcp,&paquetRebut, sizeof(paquetRebut),0) < 0){
+                printf("Operació fallida\n");
             } else {
-                strcpy(clients[numClient].estat, "DISCONNECTED");
+                printPaquetRebutTCP(paquetRebut);
+                if(authorizedClient(paquetRebut.mac, "SEND_HELLO") && equals(getPackage(paquetRebut.pdu).tipus,"DATA_ACK")){
+                    char filename[55];
+                    sprintf(filename, "%s-%s.data", clients[numClient].name, clients[numClient].situacio);
+                    if(!writeFile(filename, paquetRebut.dispositiu, paquetRebut.valor, getPackage(setData.pdu).tipus)){
+                        printf("No s'han pogut escriure les dades al fitxer");
+                    }
+                } else if(equals(getPackage(paquetRebut.pdu).tipus, "DATA_NACK")){
+                    printf("Operació fallida, DATA_NACK rebut\n");
+                } else {
+                    strcpy(clients[numClient].estat, "DISCONNECTED");
+                }
             }
+        } else{
+            printf("Us: set <nom-controlador> <nom-dispositiu> <valor>\n");
         }
-    } else{
-        printf("Us: get <nom-controlador> <nom-dispositiu>\n");
+    } else {
+        printf("L'element anomenat: %s és un sensor i no permet establir el seu valor\n", name);
     }
     close(dataTcp);
     readConsoleInput();
