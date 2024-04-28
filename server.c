@@ -586,56 +586,7 @@ void *keepAliveClient(void *args){
     
 }
 
-//Es llegeixen comandes de la consola
-/*void readConsoleInput(){
-    printf("HOLAAAA\n");
-    char buffer[MAX_LENGTH];
-    char *token;
-    char ctrlr[20];
-    char name[20]; 
-    char value[20];
-    while (true){
-        fgets(buffer, MAX_LENGTH, stdin);
-        token = strtok(buffer, " \n");
-        printf("BUFFER: %s\n", buffer);
-        if(equals(buffer, "list")){
-            list();
-        } else if(equals(buffer, "quit")){
-            quitServer();
-        } else if(equals(buffer, "set")){
-            token = strtok(NULL, " ");
-            if (token != NULL) {
-                strcpy(ctrlr, token);
-                token = strtok(NULL, " ");
-                if (token != NULL) {
-                    strcpy(name, token);
-                    token = strtok(NULL, " \n");
-                    if (token != NULL) {
-                        strcpy(value, token);
-                    }
-                }
-            }
-            buffer[0] = '\0';
-            token = NULL;
-            setData(ctrlr, name, value);
-        } else if(equals(buffer, "get")){
-            token = strtok(NULL, " ");
-            if (token != NULL) {
-                strcpy(ctrlr, token);
-                token = strtok(NULL, " \n");
-                if (token != NULL) {
-                    strcpy(name, token);
-                }
-            }
-            buffer[0] = '\0';
-            token = NULL;
-            getClientDataTcp(ctrlr, name);
-        } else {
-            printf("Comanda no vàlida: %s\n", buffer);
-        }
-    }
-}*/
-
+//Es llegeixe les comandes de terminal
 void readConsoleInput(){
     char buffer[MAX_LENGTH];
     char action[20];
@@ -776,6 +727,7 @@ bool sendUDP(PaquetUDP package, struct sockaddr_in *clientAddr, socklen_t client
     }
 }
 
+//S'accepten connexions dels clients per a que enviin dades
 void *getClientData(void *args) {
     socklen_t clientAddrLen = sizeof(tcp_server_addr);
     while(true){
@@ -807,6 +759,7 @@ void *getClientData(void *args) {
     }
 }
 
+//Es crear una estructura de tipus paquet TCP
 PaquetTCP crearPaquetTCP(tipusPaquet tipus, char rand[], char motiu[], char dispositiu[], char valor[]){
     PaquetTCP paquet;
     //strcpy(paquet.mac, server.mac);
@@ -819,6 +772,7 @@ PaquetTCP crearPaquetTCP(tipusPaquet tipus, char rand[], char motiu[], char disp
     return paquet;
 }
 
+//Es passa un paquet TCP a bytes per enviar-lo pel socket i que el client el pugui decodificar fàcilment
 void tcpToBytes(PaquetTCP *packet, char *bytes) {
     int offset = 0;
     bytes[offset] = packet->pdu;
@@ -834,6 +788,7 @@ void tcpToBytes(PaquetTCP *packet, char *bytes) {
     memcpy(bytes + offset, packet->data, sizeof(packet->data));
 }
 
+//S'envia un paquet de tipud TCP al socket indicat
 bool sendTCP(PaquetTCP package, int sock) {
     char paquetArray[118];
     tcpToBytes(&package, paquetArray);
@@ -847,6 +802,7 @@ bool sendTCP(PaquetTCP package, int sock) {
     }
 }
 
+//A partir d'un nom de sensor i del numero de client que l'hauria de contenir, es comprova si existeix
 bool existsSensor(char nom[], int indexClient){
     bool exists = true;
     char *sensor;
@@ -864,6 +820,7 @@ bool existsSensor(char nom[], int indexClient){
     return exists;
 }
 
+//S'escriuen al fitxer les dades rebudesd amb el format adequat
 bool writeFile(char *filename, char *dispositiu, char *valor, char *tipus){
     char *token = strtok(filename," ");
     strcat(token,".data");
@@ -880,7 +837,6 @@ bool writeFile(char *filename, char *dispositiu, char *valor, char *tipus){
     strftime(data_hora, sizeof(data_hora), "%Y-%m-%d,%H:%M:%S", temps_info);
     char completeData[MAX_LENGTH];
     sprintf(completeData, "%s;%s;%s;%s", data_hora, tipus, dispositiu, valor);
-    printf("CADENA: %s\n", completeData);
     if(fprintf(dataFile, "%s\n", completeData) < 0){
         fclose(dataFile);
         return false;
@@ -890,7 +846,7 @@ bool writeFile(char *filename, char *dispositiu, char *valor, char *tipus){
     }
 }
 
-
+//Si es rep la comadna get, i el nom del controlador i el sensor existeixen, s'envia un paquet TCP al client i la resposta en cas de que sigui existosa s'escriu al fitxer
 void getClientDataTcp(char *ctrlr, char *name){
     int numClient = getClientFromCtrlr(ctrlr);
     printf("NUM CLIENT: %d\n", numClient);
@@ -922,6 +878,7 @@ void getClientDataTcp(char *ctrlr, char *name){
     readConsoleInput();
 }
 
+//Si es rep la comanda set, s'envia el paquet al client i la resposta s'escriu al fitxer
 void setData(char *ctrlr, char *name, char *value){
     int numClient = getClientFromCtrlr(ctrlr);
     PaquetTCP paquetRebut;
@@ -952,6 +909,7 @@ void setData(char *ctrlr, char *name, char *value){
     readConsoleInput();
 }
 
+//Es rep la posició del client en el array a partir del seu nom
 int getClientFromCtrlr(char *ctrlr){
     for(int i = 0; i < 6; i++){
         if(equals(clients[i].name, ctrlr)){
@@ -961,6 +919,7 @@ int getClientFromCtrlr(char *ctrlr){
     return -1;
 }
 
+//Es comproba si existeix un client a partir del seuu nom
 bool ctrlExists(char *ctrl){
     for(int i = 0; i < 6; i++){
         if(equals(clients[i].name, ctrl)){
@@ -970,6 +929,7 @@ bool ctrlExists(char *ctrl){
     return false;
 }
 
+//A partir de les dades rebudes en el paquet es guardar el valor del port TCP per la connexio
 void getTcpPort(char *data){
     char numero[20];
     int i = 0;
@@ -983,6 +943,7 @@ void getTcpPort(char *data){
     dataTcpPort = atoi(numero);
 }
 
+//Es crea el socket per enviar les comandes de get i set al client
 void createTcpDataSocket(){
     created = true;
     struct sockaddr_in dataTcpAddr;
@@ -995,7 +956,7 @@ void createTcpDataSocket(){
     memset(&dataTcpAddr, 0, sizeof(dataTcpAddr));
     dataTcpAddr.sin_family = AF_INET;
     dataTcpAddr.sin_addr.s_addr = INADDR_ANY;
-    dataTcpAddr.sin_port = htons(dataTcpPort); //CAMBIA RPOR EL PUERTO RECIBIDO
+    dataTcpAddr.sin_port = htons(dataTcpPort);
     
 
     /*Enllaçar socket TCP*/
@@ -1004,4 +965,4 @@ void createTcpDataSocket(){
         exit(EXIT_FAILURE);
     }
 }
-//ARREGLAR STACK SAMSHING, ESTA EN LA FUNCION DE READ INPUT, EL GET Y EL SET ESCRIBEN CORRECTAMENTE EN EL ARCHIBO
+
