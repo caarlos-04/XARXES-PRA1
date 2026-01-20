@@ -51,10 +51,6 @@ Make sure the server is running before launching the client. It allows at most 5
 ## 👨‍💻 Author
 
   Carlos Mazarico
-
-  Computer Engineering student @ Universitat de Lleida (UdL)
-
-  📫 Contact: cmazarico@gmail.com
   
 ---
 
